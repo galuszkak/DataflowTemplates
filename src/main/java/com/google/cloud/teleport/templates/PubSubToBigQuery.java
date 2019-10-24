@@ -262,6 +262,9 @@ public class PubSubToBigQuery {
             /*
              * Step #2: Transform the PubsubMessages into TableRows
              */
+            .apply("FilterOut", Filter.by(
+              (SerializableFunction<PubsubMessage, Boolean>) context -> context.getAttribute("subFolder").equals("events"))
+            )
             .apply("ConvertMessageToTableRow", new PubsubMessageToTableRow(options));
 
     /*
@@ -391,14 +394,6 @@ public class PubSubToBigQuery {
           input
               // Map the incoming messages into FailsafeElements so we can recover from failures
               // across multiple transforms.
-              .apply(Filter.by(
-                      new SerializableFunction<PubsubMessage, Boolean>() {
-                        @Override
-                        public Boolean apply(PubsubMessage context) {
-                          return context.getAttribute("subFolder").equals("events");
-                        }
-                      })
-              )
               .apply("MapToRecord", ParDo.of(new PubsubMessageToFailsafeElementFn()))
               .apply(
                   "InvokeUDF",
