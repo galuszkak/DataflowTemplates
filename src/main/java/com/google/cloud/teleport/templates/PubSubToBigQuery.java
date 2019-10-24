@@ -53,6 +53,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Filter;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -390,6 +391,14 @@ public class PubSubToBigQuery {
           input
               // Map the incoming messages into FailsafeElements so we can recover from failures
               // across multiple transforms.
+              .apply(Filter.by(
+                      new SerializableFunction<PubsubMessage, Boolean>() {
+                        @Override
+                        public Boolean apply(PubsubMessage context) {
+                          return context.getAttribute("subFolder").equals("events");
+                        }
+                      })
+              )
               .apply("MapToRecord", ParDo.of(new PubsubMessageToFailsafeElementFn()))
               .apply(
                   "InvokeUDF",
